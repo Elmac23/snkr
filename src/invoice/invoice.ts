@@ -15,7 +15,7 @@ const invoiceSchema = zod.object({
   postalCode: zod.string().regex(/[0-9]{2}-[0-9]{3}/),
   city: zod.string().min(2),
   street: zod.string().min(2),
-  streetNumber: zod.number().min(1),
+  streetNumber: zod.string().min(1),
   housingNumber: zod.number().optional(),
   shoes: zod.array(
     zod.object({
@@ -54,7 +54,7 @@ export async function createInvoice(req: Request, res: Response) {
     email: jsonObject.email,
     postalCode: jsonObject.postalCode,
     street: jsonObject.street,
-    streetNumber: +jsonObject.streetNumber,
+    streetNumber: jsonObject.streetNumber,
     housingNumber: +jsonObject.housingNumber,
     shoes: newShoes,
     city: jsonObject.city,
