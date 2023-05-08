@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Document</title>
+    <style>
+      html {
+        font-family: serif;
+      }
+      h2 {
+        text-align: center;
+      }
+      .min {
+        font-size: 0.75rem;
+      }
+      .underline {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>UMOWA KUPNA SPRZEDAŻY</h2>
+    <p>
+      Zawarta dnia <u>{{day}}.{{month}}.{{year}}</u> roku w Częstochowie
+      Pomiędzy:
+    </p>
+    <p>
+      <strong>Kupującym: </strong>Marcel Wolnik, prowadzącym działalność
+      gospodarczą pod firmą Marcel Wolnik NIP 5732941905 Ul. Skrzetuskiego 56,
+      42-202 Częstochowa
+    </p>
+    <p>
+      <strong>Sprzedającym:</strong> <br />
+      Imię i nazwisko:
+      <span class="underline">{{name}} {{lastname}} </span>
+      <br />
+      Adres zameldowania:
+      <span class="underline"
+        >{{city}} {{postalCode}} ul. {{street}} {{streetNumber}} {{#ifCond
+        isHousingNumber "!==" false}} / {{housingNumber}} {{/ifCond}}
+      </span>
+    </p>
+    <p>§1</p>
+    <p>
+      1. Sprzedawca oświadcza, że jest właścicielem ruchomości (model, rozmiar,
+      cena):
+    </p>
+    <p>
+      {{#each shoes}} {{this.model}} | Rozmiar: {{this.size}} | Cena:
+      {{this.price}} zł | Ilość par: {{this.count}}
+      <br />
+      {{/each}}
+    </p>
+
+    <p class="min">
+      2. Sprzedawca oświadcza, że towar jest towarem używanym w rozumieniu
+      przepisu art. 120 ust 1 pkt 4 ustawy o VAT, że sprzedawane przedmioty
+      stanowią jego wyłączną własność i nie są obciążone prawami na rzecz osób
+      trzecich, że przedmioty są przedmiotami kolekcjonerskimi, sprzedawanymi z
+      drugiej ręki, nie posiadają żadnych wad (przetarcia, plamy, postrzępienia
+      materiału, zgięcia, różnice w wielkości butów). Ze względu na
+      kolekcjonerski charakter butów, zgodność powyższego oświadczenia ze stanem
+      rzeczywistym ma dla Kupującego podstawowe znaczenie i stanowi podstawę
+      podjęcia przez niego decyzji o zawarciu umowy. W razie stwierdzenia wad
+      przez kupującego, może on w terminie 14 dni od otrzymania przedmiotu
+      sprzedaży od umowy odstąpić, i zwrócić jej przedmiot sprzedającemu, a
+      sprzedawca zobowiązuje się do przyjęcia zwrotu na koszt własny.
+      Uprawnienie powyższe nie wyłącza ani nie ogranicza uprawnień kupującego z
+      tytułu rękojmi za wady ani z tytułu nienależytego wykonania umowy.
+      <br />
+      3. Zapłata nastąpi przelewem na konto sprzedającego, chyba że zostanie
+      między stronami ustalony inny sposób zapłaty. <br />
+      4. Przeniesienie własności towaru (oraz ryzyka jego utraty lub
+      uszkodzenia) następuje z chwilą jego odebrania przez Kupującego. <br />
+      5. W sprawach nieuregulowanych niniejszą umową stosuje się odpowiednie
+      przepisy Kodeksu Cywilnego. <br />
+      6. Wszelkie zmiany lub uzupełnienia niniejszej umowy dla swojej ważności
+      wymagają formy pisemnej pod rygorem nieważności. <br />
+      7. Umowę sporządzono w dwóch jednobrzmiących egzemplarzach, po jednym dla
+      każdej ze stron.
+    </p>
+    <table style="width: 100%">
+      <tbody>
+        <tr style="height: 100px">
+          <td width="50%" style="text-align: center">
+            <img src="http://localhost:5000/podpis.png" height="100" />
+          </td>
+          <td style="text-align: center">
+            <img src="http://localhost:5000/{{signature}}" height="100" />
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <p style="text-align: center"><strong>Kupujący</strong></p>
+          </td>
+          <td>
+            <p style="text-align: center"><strong>Sprzedający</strong></p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="min" style="clear: both">
+      Zgodnie z podstawą prawną art. 6 ust.1 lit. b RODO oraz art. 13 ust. 1 i 2
+      rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27
+      kwietnia 2016 r. w sprawie ochrony osób fizycznych w związku z
+      przetwarzaniem danych osobowych i w sprawie swobodnego przepływu takich
+      danych oraz uchylenia dyrektywy 95/46/WE (ogólne rozporządzenie o ochronie
+      danych, dalej: RODO) informujemy, że: - Administratorem danych osobowych
+      Sprzedającego jest Marcel Wolnik SNEAKERMAN.STORE Ul. Skrzetuskiego 56,
+      42-202 Częstochowa NIP 5732941905 - Dane osobowe Sprzedającego
+      przetwarzane będą w celu realizacji praw i obowiązków wynikających z
+      zawartej umowy sprzedaży oraz do celów wynikających z prawnie
+      uzasadnionych interesów realizowanych przez Administratora, to jest
+      ochrony przed próbami oszustwa, dokumentowania legalnego pochodzenia
+      nabywanych rzeczy oraz w celu dochodzenia roszczeń sprzedaży. - Dane
+      osobowe Sprzedającego będą przetwarzane przez okres obowiązywania umowy
+      oraz 5 lat po jej zakończeniu, a dla danych finansowych i rozliczeniowych
+      – 8 lat od daty ostatniej transakcji. - Administrator może powierzyć
+      przetwarzanie danych osobowych innym podmiotom obsługującym go w zakresie
+      transportowym, IT, księgowym, rachunkowym, prawnym, pocztowym. -
+      Sprzedającemu przysługuje na zasadach określonych w RODO: prawo dostępu do
+      danych; prawo żądania sprostowania danych; prawo do usunięcia danych;
+      prawo do ograniczenia przetwarzania danych, uprawnienie do wniesienia
+      skargi do organu nadzorczego, tj. Prezesa Urzędu Ochrony Danych Osobowych
+      (ul. Stawki 2, 00-193 Warszawa), gdy uzna, że przetwarzanie danych
+      osobowych narusza przepisy RODO. - Podanie danych osobowych jest warunkiem
+      zawarcia umowy sprzedaży i realizacji umów zawartych z Kupującym, a
+      niepodanie tych danych skutkować będzie niemożnością zawarcia realizacji
+      Umowy.
+    </p>
+  </body>
+</html>
