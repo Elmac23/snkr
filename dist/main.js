@@ -10,14 +10,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const server_js_1 = require("./utils/server.js");
+const https_1 = require("https");
+const fs_1 = require("fs");
 const dotenv_1 = require("dotenv");
 (0, dotenv_1.config)();
 const PORT = process.env.PORT;
 const server = (0, server_js_1.createServer)();
+const sslServer = (0, https_1.createServer)({
+    key: (0, fs_1.readFileSync)("./cert/key.pem"),
+    cert: (0, fs_1.readFileSync)("./cert/cert.pem"),
+}, server);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            server.listen(PORT, () => {
+            sslServer.listen(PORT, () => {
                 console.log(`Listening on port: ${PORT}`);
             });
         }
