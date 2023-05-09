@@ -83,7 +83,7 @@ export async function createInvoice(req: Request, res: Response) {
     footer: {
       height: "5mm",
       contents: {
-        default: `<span style="font-size: 14px">Id umowy: ${invoiceId}</span>`,
+        default: `<span style="font-size: 10px">Id umowy: ${invoiceId}</span>`,
       },
     },
   };
