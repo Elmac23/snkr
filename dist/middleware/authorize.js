@@ -8,30 +8,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.prismaClient = void 0;
-const server_js_1 = require("./utils/server.js");
+exports.authorize = void 0;
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const dotenv_1 = require("dotenv");
+const UnauthorizedError_js_1 = require("../utils/Errors/UnauthorizedError.js");
 (0, dotenv_1.config)();
-const PORT = process.env.PORT;
-const client_1 = require("@prisma/client");
-const server = (0, server_js_1.createServer)();
-exports.prismaClient = new client_1.PrismaClient();
-function run() {
+function authorize(req, res, next) {
+    var _a;
     return __awaiter(this, void 0, void 0, function* () {
-        try {
-            exports.prismaClient.$connect();
-            server.listen(PORT, () => {
-                console.log(`Listening on port: ${PORT}`);
-            });
-        }
-        catch (e) {
-            console.log(e);
-            exports.prismaClient.$disconnect();
-        }
-        finally {
-        }
+        const token = (_a = req.headers["authorization"]) === null || _a === void 0 ? void 0 : _a.split(" ")[1];
+        if (!token)
+            throw new UnauthorizedError_js_1.UnauthorizedError("Jwt token wasnt provided");
+        const result = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        console.log(result);
+        next();
     });
 }
-run();
-//# sourceMappingURL=main.js.map
+exports.authorize = authorize;
+//# sourceMappingURL=authorize.js.map

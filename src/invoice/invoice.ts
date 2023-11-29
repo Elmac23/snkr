@@ -1,44 +1,33 @@
 import { Request, Response, Router } from "express";
 import pdf from "pdf-creator-node";
 import { readFileAsync } from "../utils/readFileAsync";
-import zod from "zod";
 import { v4 as uuid } from "uuid";
 import { BadRequestError } from "../utils/Errors/BadRequestError";
 import { uploadFile } from "../utils/uploadFile";
 import { unlinkAsync } from "../utils/unlinkAsync";
 import { sendInvoice } from "../utils/emailSender";
-const invoiceSchema = zod.object({
-  date: zod.string(),
-  name: zod.string().min(3),
-  lastname: zod.string().min(2),
-  email: zod.string().email(),
-  postalCode: zod.string().regex(/[0-9]{2}-[0-9]{3}/),
-  city: zod.string().min(2),
-  street: zod.string().min(2),
-  streetNumber: zod.string().min(1),
-  housingNumber: zod.number().optional(),
-  shoes: zod.array(
-    zod.object({
-      model: zod.string(),
-      size: zod.number().min(1).max(70),
-      price: zod.number().min(1),
-      count: zod.number().min(1),
-    })
-  ),
-});
+import { Shoe, invoiceSchema } from "./schema";
+import { prismaClient } from "../main";
+import { NotFoundError } from "../utils/Errors/NotFoundError";
+import { compare } from "bcrypt";
+import { config } from "dotenv";
+import jwt from "jsonwebtoken";
+import { ForbiddenError } from "../utils/Errors/ForbiddenError";
+import { authorize } from "../middleware/authorize";
+config();
 
-type Shoe = {
+type NewShoe = {
   model: string;
-  size: string;
-  price: string;
-  count: string;
+  size: number;
+  price: number;
+  count: number;
 };
 
 export async function createInvoice(req: Request, res: Response) {
   const { json } = req.body;
   const jsonObject = JSON.parse(json);
 
-  const newShoes = jsonObject.shoes.map((shoe: Shoe) => {
+  const newShoes: NewShoe[] = jsonObject.shoes.map((shoe: Shoe) => {
     return {
       model: shoe.model,
       size: +shoe.size,
@@ -47,7 +36,7 @@ export async function createInvoice(req: Request, res: Response) {
     };
   });
 
-  const data = await invoiceSchema.parseAsync({
+  const { shoes, ...data } = await invoiceSchema.parseAsync({
     date: jsonObject.date,
     lastname: jsonObject.lastname,
     name: jsonObject.name,
@@ -58,6 +47,8 @@ export async function createInvoice(req: Request, res: Response) {
     housingNumber: +jsonObject.housingNumber,
     shoes: newShoes,
     city: jsonObject.city,
+    country: jsonObject.country,
+    currency: jsonObject.currency,
   });
 
   const signature = req.files?.signature;
@@ -74,7 +65,19 @@ export async function createInvoice(req: Request, res: Response) {
 
   const invoiceId = uuid().substring(0, 8);
 
-  // const invoiceId = 1234;
+  // const invoiceId = "1234";
+
+  await prismaClient.invoice.create({
+    data: {
+      id: invoiceId,
+      ...data,
+      shoes: {
+        createMany: {
+          data: newShoes,
+        },
+      },
+    },
+  });
 
   const options = {
     format: "A4",
@@ -104,6 +107,7 @@ export async function createInvoice(req: Request, res: Response) {
       isHousingNumber: !!jsonObject.housingNumber,
       signature: imagePath,
       shoes: jsonObject.shoes,
+      country: jsonObject.country,
     },
     path: `./invoices/${invoiceId}.pdf`,
     type: "",
@@ -119,8 +123,92 @@ export async function createInvoice(req: Request, res: Response) {
   res.status(201).json({});
 }
 
+export async function login(req: Request, res: Response) {
+  const { login, password } = req.body;
+  if (!login || !password)
+    throw new BadRequestError("Login and password are mandatory!");
+  const passwordResult = await compare(password, process.env.APP_PASSWORD!);
+  const loginResult = login === process.env.APP_LOGIN;
+  if (!passwordResult || !loginResult)
+    throw new ForbiddenError("Invalid login or password!");
+  const token = jwt.sign({ login }, process.env.JWT_SECRET!, {
+    expiresIn: "365d",
+  });
+  res.status(200).json({ token });
+}
+
+export async function getInvoices(req: Request, res: Response) {
+  const { page, limit, query, orderByDate } = req.query;
+  const newQuery = (query as string) || "";
+  const newOrderByDate = orderByDate === "asc" ? orderByDate : "desc";
+
+  const invoices = await prismaClient.invoice.findMany({
+    take: Number(limit) || 10,
+    skip: (Number(page) - 1) * Number(limit) || 0,
+    orderBy: {
+      date: newOrderByDate,
+    },
+    where: {
+      OR: [
+        {
+          country: {
+            contains: newQuery,
+            mode: "insensitive",
+          },
+        },
+        {
+          name: {
+            contains: newQuery,
+            mode: "insensitive",
+          },
+        },
+        {
+          email: {
+            contains: newQuery,
+            mode: "insensitive",
+          },
+        },
+        {
+          lastname: {
+            contains: newQuery,
+            mode: "insensitive",
+          },
+        },
+      ],
+    },
+  });
+  res.status(200).json(invoices);
+}
+export async function getInvoiceById(req: Request, res: Response) {
+  const { id } = req.params;
+  const invoice = await prismaClient.invoice.findUnique({
+    where: {
+      id: id,
+    },
+    include: {
+      shoes: {},
+    },
+  });
+  if (!invoice) throw new NotFoundError("Invoice not found!");
+  res.status(200).json(invoice);
+}
+
+export async function deleteInvoiceById(req: Request, res: Response) {
+  const { id } = req.params;
+  const invoice = await prismaClient.invoice.delete({
+    where: {
+      id: id,
+    },
+  });
+  res.status(204);
+}
+
 const invoiceRouter = Router();
 
-invoiceRouter.post("/", createInvoice);
+invoiceRouter.post("/invoices", createInvoice);
+invoiceRouter.post("/login", login);
+invoiceRouter.get("/invoices", authorize, getInvoices);
+invoiceRouter.get("/invoices/:id", authorize, getInvoiceById);
+invoiceRouter.delete("/invoices/:id", authorize, deleteInvoiceById);
 
 export { invoiceRouter };

@@ -5,21 +5,27 @@ import { config } from "dotenv";
 config();
 const PORT = process.env.PORT;
 
+import { PrismaClient } from "@prisma/client";
 const server = createServer();
-const sslServer = createHttpsServer(
-  {
-    key: readFileSync("./cert/key.pem"),
-    cert: readFileSync("./cert/cert.pem"),
-  },
-  server
-);
+// const sslServer = createHttpsServer(
+//   {
+//     key: readFileSync("./cert/key.pem"),
+//     cert: readFileSync("./cert/cert.pem"),
+//     rejectUnauthorized: false,
+//     requestCert: true,
+//   },
+//   server
+// );
+export const prismaClient = new PrismaClient();
 async function run() {
   try {
-    sslServer.listen(PORT, () => {
+    prismaClient.$connect();
+    server.listen(PORT, () => {
       console.log(`Listening on port: ${PORT}`);
     });
   } catch (e) {
     console.log(e);
+    prismaClient.$disconnect();
   } finally {
   }
 }

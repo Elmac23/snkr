@@ -6,13 +6,13 @@
     <style>
       html {
         font-family: "DejaVu Sans";
-        font-size: 12px;
+        font-size: 16px;
       }
       h2 {
         text-align: center;
       }
       .min {
-        font-size: 0.75rem;
+        font-size: 0.65rem;
       }
       .underline {
         text-decoration: underline;
@@ -37,8 +37,8 @@
       <br />
       Adres zameldowania:
       <span class="underline"
-        >{{city}} {{postalCode}} ul. {{street}} {{streetNumber}} {{#ifCond
-        isHousingNumber "!==" false}} / {{housingNumber}} {{/ifCond}}
+        >{{country}} {{city}} {{postalCode}} ul. {{street}} {{streetNumber}}
+        {{#ifCond isHousingNumber "!==" false}} / {{housingNumber}} {{/ifCond}}
       </span>
     </p>
     <p>§1</p>

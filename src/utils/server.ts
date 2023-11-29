@@ -11,7 +11,6 @@ import cors from "cors";
 import { fileFormatRestriction } from "../middleware/fileFormatRestriction.js";
 export function createServer() {
   const app = express();
-  const masterRouter = Router();
 
   app.use(
     cors({
@@ -30,10 +29,11 @@ export function createServer() {
   );
   app.use(fileFormatRestriction("png"));
   app.use(morgan("dev"));
-  masterRouter.use("/invoices", invoiceRouter);
-  app.use("/", masterRouter);
+  app.use("/", invoiceRouter);
   app.use(express.static("public"));
-
+  app.get("/*", function (req, res) {
+    res.sendFile(path.join(__dirname, "../../public/index.html"));
+  });
   app.use(notFound);
   app.use(errorHandling);
 
