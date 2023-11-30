@@ -113,7 +113,7 @@ export async function createInvoice(req: Request, res: Response) {
       signature: imagePath,
       shoes: jsonObject.shoes,
       country: jsonObject.country,
-      currency: currencyMark[jsonObject.currency as "EUR" | "PLN"],
+      currency: jsonObject.currency,
     },
     path: `./invoices/${invoiceId}.pdf`,
     type: "",
