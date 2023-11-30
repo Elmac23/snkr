@@ -91,6 +91,11 @@ export async function createInvoice(req: Request, res: Response) {
     },
   };
 
+  const currencyMark = {
+    PLN: "zł",
+    EUR: "€",
+  };
+
   const document = {
     html: html,
     data: {
@@ -108,6 +113,7 @@ export async function createInvoice(req: Request, res: Response) {
       signature: imagePath,
       shoes: jsonObject.shoes,
       country: jsonObject.country,
+      currency: currencyMark[jsonObject.currency as "EUR" | "PLN"],
     },
     path: `./invoices/${invoiceId}.pdf`,
     type: "",
