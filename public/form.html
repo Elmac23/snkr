@@ -44,11 +44,11 @@
     <p>§1</p>
     <p>
       1. Sprzedawca oświadcza, że jest właścicielem ruchomości (model, rozmiar,
-      cena):
+      cena({{currency}})):
     </p>
     <p>
       {{#each shoes}} {{this.model}} | Rozmiar: {{this.size}} | Cena:
-      {{this.price}} {{currency}} | Ilość par: {{this.count}}
+      {{this.price}} | Ilość par: {{this.count}}
       <br />
       {{/each}}
     </p>
