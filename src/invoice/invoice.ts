@@ -148,34 +148,45 @@ export async function getInvoices(req: Request, res: Response) {
   const newQuery = (query as string) || "";
   const newOrderByDate = orderByDate === "asc" ? orderByDate : "desc";
 
-  const invoices = await prismaClient.invoice.findMany({
+  const invoices = await prismaClient.shoe.findMany({
     take: Number(limit) || 10,
     skip: (Number(page) - 1) * Number(limit) || 0,
     orderBy: {
-      date: newOrderByDate,
+      Invoice: {
+        date: newOrderByDate,
+      },
+    },
+    include: {
+      Invoice: true,
     },
     where: {
       OR: [
         {
-          country: {
-            contains: newQuery,
-            mode: "insensitive",
+          Invoice: {
+            name: {
+              contains: newQuery,
+              mode: "insensitive",
+            },
           },
         },
         {
-          name: {
-            contains: newQuery,
-            mode: "insensitive",
+          Invoice: {
+            email: {
+              contains: newQuery,
+              mode: "insensitive",
+            },
           },
         },
         {
-          email: {
-            contains: newQuery,
-            mode: "insensitive",
+          Invoice: {
+            lastname: {
+              contains: newQuery,
+              mode: "insensitive",
+            },
           },
         },
         {
-          lastname: {
+          model: {
             contains: newQuery,
             mode: "insensitive",
           },
@@ -192,7 +203,7 @@ export async function getInvoiceById(req: Request, res: Response) {
       id: id,
     },
     include: {
-      shoes: {},
+      shoes: true,
     },
   });
   if (!invoice) throw new NotFoundError("Invoice not found!");

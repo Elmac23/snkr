@@ -96,6 +96,10 @@ function createInvoice(req, res) {
                 },
             },
         };
+        const currencyMark = {
+            PLN: "zł",
+            EUR: "€",
+        };
         const document = {
             html: html,
             data: {
@@ -113,6 +117,7 @@ function createInvoice(req, res) {
                 signature: imagePath,
                 shoes: jsonObject.shoes,
                 country: jsonObject.country,
+                currency: jsonObject.currency,
             },
             path: `./invoices/${invoiceId}.pdf`,
             type: "",
@@ -146,34 +151,45 @@ function getInvoices(req, res) {
         const { page, limit, query, orderByDate } = req.query;
         const newQuery = query || "";
         const newOrderByDate = orderByDate === "asc" ? orderByDate : "desc";
-        const invoices = yield main_1.prismaClient.invoice.findMany({
+        const invoices = yield main_1.prismaClient.shoe.findMany({
             take: Number(limit) || 10,
             skip: (Number(page) - 1) * Number(limit) || 0,
             orderBy: {
-                date: newOrderByDate,
+                Invoice: {
+                    date: newOrderByDate,
+                },
+            },
+            include: {
+                Invoice: true,
             },
             where: {
                 OR: [
                     {
-                        country: {
-                            contains: newQuery,
-                            mode: "insensitive",
+                        Invoice: {
+                            name: {
+                                contains: newQuery,
+                                mode: "insensitive",
+                            },
                         },
                     },
                     {
-                        name: {
-                            contains: newQuery,
-                            mode: "insensitive",
+                        Invoice: {
+                            email: {
+                                contains: newQuery,
+                                mode: "insensitive",
+                            },
                         },
                     },
                     {
-                        email: {
-                            contains: newQuery,
-                            mode: "insensitive",
+                        Invoice: {
+                            lastname: {
+                                contains: newQuery,
+                                mode: "insensitive",
+                            },
                         },
                     },
                     {
-                        lastname: {
+                        model: {
                             contains: newQuery,
                             mode: "insensitive",
                         },
@@ -193,7 +209,7 @@ function getInvoiceById(req, res) {
                 id: id,
             },
             include: {
-                shoes: {},
+                shoes: true,
             },
         });
         if (!invoice)
