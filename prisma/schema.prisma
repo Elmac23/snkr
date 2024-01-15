@@ -30,7 +30,7 @@ model Invoice {
 model Shoe {
   id        String   @id @default(uuid())
   model     String
-  size      Int
+  size      Float
   price     Float
   count     Int
   Invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
