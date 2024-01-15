@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.invoiceRouter = exports.deleteInvoiceById = exports.getInvoiceById = exports.getInvoices = exports.login = exports.createInvoice = void 0;
+exports.invoiceRouter = exports.deleteInvoiceById = exports.getInvoiceById = exports.getInvoices = exports.login = exports.regenerateInvoice = exports.createInvoice = void 0;
 const express_1 = require("express");
 const pdf_creator_node_1 = __importDefault(require("pdf-creator-node"));
 const readFileAsync_1 = require("../utils/readFileAsync");
@@ -79,7 +79,7 @@ function createInvoice(req, res) {
         const html = yield (0, readFileAsync_1.readFileAsync)("public/form.html", "utf-8");
         const invoiceId = (0, uuid_1.v4)().substring(0, 8);
         yield main_1.prismaClient.invoice.create({
-            data: Object.assign(Object.assign({ id: invoiceId }, data), { shoes: {
+            data: Object.assign(Object.assign({ id: invoiceId }, data), { signatureLink: imagePath, shoes: {
                     createMany: {
                         data: newShoes,
                     },
@@ -124,12 +124,68 @@ function createInvoice(req, res) {
         };
         const { filename } = yield pdf_creator_node_1.default.create(document, options);
         yield (0, emailSender_1.sendInvoice)(jsonObject.email, `./invoices/${invoiceId}.pdf`);
-        yield (0, unlinkAsync_1.unlinkAsync)(`./public/${imagePath}`);
         yield (0, unlinkAsync_1.unlinkAsync)(`./invoices/${invoiceId}.pdf`);
         res.status(201).json({});
     });
 }
 exports.createInvoice = createInvoice;
+function regenerateInvoice(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { id } = req.params;
+        const invoice = yield main_1.prismaClient.invoice.findUnique({
+            where: {
+                id: id,
+            },
+            include: {
+                shoes: true,
+            },
+        });
+        if (!invoice)
+            throw new NotFoundError_1.NotFoundError("Invoice not found!");
+        const [year, month, day] = invoice.date.split("T")[0].split("-");
+        const html = yield (0, readFileAsync_1.readFileAsync)("public/form.html", "utf-8");
+        const options = {
+            format: "A4",
+            orientation: "portrait",
+            border: "10mm",
+            footer: {
+                height: "5mm",
+                contents: {
+                    default: `<span style="font-size: 10px">Id umowy: ${id}</span>`,
+                },
+            },
+        };
+        const currencyMark = {
+            PLN: "zł",
+            EUR: "€",
+        };
+        const document = {
+            html: html,
+            data: {
+                year,
+                month,
+                day,
+                lastname: invoice.lastname,
+                name: invoice.name,
+                postalCode: invoice.postalCode,
+                street: invoice.street,
+                streetNumber: invoice.streetNumber,
+                housingNumber: invoice.housingNumber,
+                city: invoice.city,
+                isHousingNumber: !!invoice.housingNumber,
+                shoes: invoice.shoes,
+                country: invoice.country,
+                currency: invoice.currency,
+                signature: invoice.signatureLink,
+            },
+            path: `./invoices/${id}.pdf`,
+            type: "",
+        };
+        const { filename } = yield pdf_creator_node_1.default.create(document, options);
+        res.status(200).download(`./invoices/${id}.pdf`, filename);
+    });
+}
+exports.regenerateInvoice = regenerateInvoice;
 function login(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         const { login, password } = req.body;
@@ -226,7 +282,7 @@ function deleteInvoiceById(req, res) {
                 id: id,
             },
         });
-        res.status(204);
+        res.status(204).json({});
     });
 }
 exports.deleteInvoiceById = deleteInvoiceById;
@@ -236,5 +292,6 @@ invoiceRouter.post("/invoices", createInvoice);
 invoiceRouter.post("/login", login);
 invoiceRouter.get("/invoices", authorize_1.authorize, getInvoices);
 invoiceRouter.get("/invoices/:id", authorize_1.authorize, getInvoiceById);
+invoiceRouter.get("/invoices/regenerate/:id", authorize_1.authorize, regenerateInvoice);
 invoiceRouter.delete("/invoices/:id", authorize_1.authorize, deleteInvoiceById);
 //# sourceMappingURL=invoice.js.map

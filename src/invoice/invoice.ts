@@ -71,6 +71,7 @@ export async function createInvoice(req: Request, res: Response) {
     data: {
       id: invoiceId,
       ...data,
+      signatureLink: imagePath as string,
       shoes: {
         createMany: {
           data: newShoes,
@@ -123,10 +124,71 @@ export async function createInvoice(req: Request, res: Response) {
 
   await sendInvoice(jsonObject.email, `./invoices/${invoiceId}.pdf`);
 
-  await unlinkAsync(`./public/${imagePath}`);
+  // await unlinkAsync(`./public/${imagePath}`);
   await unlinkAsync(`./invoices/${invoiceId}.pdf`);
 
   res.status(201).json({});
+}
+
+export async function regenerateInvoice(req: Request, res: Response) {
+  const { id } = req.params;
+  const invoice = await prismaClient.invoice.findUnique({
+    where: {
+      id: id,
+    },
+    include: {
+      shoes: true,
+    },
+  });
+
+  if (!invoice) throw new NotFoundError("Invoice not found!");
+
+  const [year, month, day] = (invoice.date as string).split("T")[0].split("-");
+
+  const html = await readFileAsync("public/form.html", "utf-8");
+
+  const options = {
+    format: "A4",
+    orientation: "portrait",
+    border: "10mm",
+    footer: {
+      height: "5mm",
+      contents: {
+        default: `<span style="font-size: 10px">Id umowy: ${id}</span>`,
+      },
+    },
+  };
+
+  const currencyMark = {
+    PLN: "zł",
+    EUR: "€",
+  };
+
+  const document = {
+    html: html,
+    data: {
+      year,
+      month,
+      day,
+      lastname: invoice.lastname,
+      name: invoice.name,
+      postalCode: invoice.postalCode,
+      street: invoice.street,
+      streetNumber: invoice.streetNumber,
+      housingNumber: invoice.housingNumber,
+      city: invoice.city,
+      isHousingNumber: !!invoice.housingNumber,
+      shoes: invoice.shoes,
+      country: invoice.country,
+      currency: invoice.currency,
+      signature: invoice.signatureLink,
+    },
+    path: `./invoices/${id}.pdf`,
+    type: "",
+  };
+  const { filename } = await pdf.create(document, options);
+  res.status(200).download(`./invoices/${id}.pdf`, filename);
+  // await unlinkAsync(`./invoices/${id}.pdf`);
 }
 
 export async function login(req: Request, res: Response) {
@@ -217,7 +279,7 @@ export async function deleteInvoiceById(req: Request, res: Response) {
       id: id,
     },
   });
-  res.status(204);
+  res.status(204).json({});
 }
 
 const invoiceRouter = Router();
@@ -226,6 +288,7 @@ invoiceRouter.post("/invoices", createInvoice);
 invoiceRouter.post("/login", login);
 invoiceRouter.get("/invoices", authorize, getInvoices);
 invoiceRouter.get("/invoices/:id", authorize, getInvoiceById);
+invoiceRouter.get("/invoices/regenerate/:id", authorize, regenerateInvoice);
 invoiceRouter.delete("/invoices/:id", authorize, deleteInvoiceById);
 
 export { invoiceRouter };

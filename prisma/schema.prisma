@@ -24,6 +24,7 @@ model Invoice {
   streetNumber  String
   housingNumber Int?
   shoes         Shoe[]
+  signatureLink String   @default("")
 }
 
 model Shoe {
@@ -32,7 +33,7 @@ model Shoe {
   size      Int
   price     Float
   count     Int
-  Invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+  Invoice   Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   invoiceId String?
 }
 
