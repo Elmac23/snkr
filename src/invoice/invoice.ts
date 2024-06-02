@@ -21,6 +21,7 @@ type NewShoe = {
   size: number;
   price: number;
   count: number;
+  id: string;
 };
 
 export async function createInvoice(req: Request, res: Response) {
@@ -33,6 +34,7 @@ export async function createInvoice(req: Request, res: Response) {
       size: +shoe.size,
       price: +shoe.price,
       count: +shoe.count,
+      id: uuid(),
     };
   });
 
@@ -63,7 +65,7 @@ export async function createInvoice(req: Request, res: Response) {
 
   const html = await readFileAsync("public/form.html", "utf-8");
 
-  const invoiceId = uuid().substring(0, 8);
+  const invoiceId = uuid();
 
   // const invoiceId = "1234";
 
@@ -80,64 +82,76 @@ export async function createInvoice(req: Request, res: Response) {
     },
   });
 
-  const options = {
-    format: "A4",
-    orientation: "portrait",
-    border: "10mm",
-    footer: {
-      height: "5mm",
-      contents: {
-        default: `<span style="font-size: 10px">Id umowy: ${invoiceId}</span>`,
-      },
-    },
-  };
+  const files = await Promise.all(
+    newShoes.map(async (shoe) => {
+      const options = {
+        format: "A4",
+        orientation: "portrait",
+        border: "10mm",
+        footer: {
+          height: "5mm",
+          contents: {
+            default: `<span style="font-size: 10px">Id umowy: ${shoe.id.slice(
+              0,
+              8
+            )}</span>`,
+          },
+        },
+      };
+      const document = {
+        html: html,
+        data: {
+          year,
+          month,
+          day,
+          lastname: jsonObject.lastname,
+          name: jsonObject.name,
+          postalCode: jsonObject.postalCode,
+          street: jsonObject.street,
+          streetNumber: jsonObject.streetNumber,
+          housingNumber: jsonObject.housingNumber,
+          city: jsonObject.city,
+          isHousingNumber: !!jsonObject.housingNumber,
+          signature: imagePath,
+          shoes: [shoe],
+          country: jsonObject.country,
+          currency: jsonObject.currency,
+        },
+        path: `./invoices/${shoe.id.slice(0, 8)}.pdf`,
+        type: "",
+      };
 
-  const currencyMark = {
-    PLN: "zł",
-    EUR: "€",
-  };
+      const { filename } = await pdf.create(document, options);
+      return `./invoices/${shoe.id.slice(0, 8)}.pdf`;
+    })
+  );
 
-  const document = {
-    html: html,
-    data: {
-      year,
-      month,
-      day,
-      lastname: jsonObject.lastname,
-      name: jsonObject.name,
-      postalCode: jsonObject.postalCode,
-      street: jsonObject.street,
-      streetNumber: jsonObject.streetNumber,
-      housingNumber: jsonObject.housingNumber,
-      city: jsonObject.city,
-      isHousingNumber: !!jsonObject.housingNumber,
-      signature: imagePath,
-      shoes: jsonObject.shoes,
-      country: jsonObject.country,
-      currency: jsonObject.currency,
-    },
-    path: `./invoices/${invoiceId}.pdf`,
-    type: "",
-  };
+  console.log(files);
 
-  const { filename } = await pdf.create(document, options);
-
-  await sendInvoice(jsonObject.email, `./invoices/${invoiceId}.pdf`);
+  await sendInvoice(jsonObject.email, files);
 
   // await unlinkAsync(`./public/${imagePath}`);
-  await unlinkAsync(`./invoices/${invoiceId}.pdf`);
+  files.forEach(async (file) => {
+    await unlinkAsync(file);
+  });
 
   res.status(201).json({});
 }
 
 export async function regenerateInvoice(req: Request, res: Response) {
   const { id } = req.params;
-  const invoice = await prismaClient.invoice.findUnique({
+  const invoice = await prismaClient.invoice.findFirst({
     where: {
-      id: id,
+      shoes: {
+        some: {
+          id,
+        },
+      },
     },
-    include: {
-      shoes: true,
+  });
+  const shoe = await prismaClient.shoe.findUnique({
+    where: {
+      id,
     },
   });
 
@@ -154,7 +168,10 @@ export async function regenerateInvoice(req: Request, res: Response) {
     footer: {
       height: "5mm",
       contents: {
-        default: `<span style="font-size: 10px">Id umowy: ${id}</span>`,
+        default: `<span style="font-size: 10px">Id umowy: ${id.slice(
+          0,
+          8
+        )}</span>`,
       },
     },
   };
@@ -178,16 +195,16 @@ export async function regenerateInvoice(req: Request, res: Response) {
       housingNumber: invoice.housingNumber,
       city: invoice.city,
       isHousingNumber: !!invoice.housingNumber,
-      shoes: invoice.shoes,
+      shoes: [shoe],
       country: invoice.country,
       currency: invoice.currency,
       signature: invoice.signatureLink,
     },
-    path: `./invoices/${id}.pdf`,
+    path: `./invoices/${id.slice(0, 8)}.pdf`,
     type: "",
   };
   const { filename } = await pdf.create(document, options);
-  res.status(200).download(`./invoices/${id}.pdf`, filename);
+  res.status(200).download(`./invoices/${id.slice(0, 8)}.pdf`, id.slice(0, 8));
   // await unlinkAsync(`./invoices/${id}.pdf`);
 }
 
@@ -258,23 +275,45 @@ export async function getInvoices(req: Request, res: Response) {
   });
   res.status(200).json(invoices);
 }
+
 export async function getInvoiceById(req: Request, res: Response) {
   const { id } = req.params;
-  const invoice = await prismaClient.invoice.findUnique({
+  const shoe = await prismaClient.shoe.findUnique({
     where: {
       id: id,
     },
-    include: {
-      shoes: true,
+  });
+  const invoice = await prismaClient.invoice.findFirst({
+    select: {
+      city: true,
+      country: true,
+      date: true,
+      currency: true,
+      email: true,
+      housingNumber: true,
+      lastname: true,
+      name: true,
+      postalCode: true,
+      signatureLink: true,
+      street: true,
+      streetNumber: true,
+    },
+    where: {
+      shoes: {
+        some: {
+          id: id,
+        },
+      },
     },
   });
-  if (!invoice) throw new NotFoundError("Invoice not found!");
-  res.status(200).json(invoice);
+
+  if (!shoe) throw new NotFoundError("Invoice not found!");
+  res.status(200).json({ ...invoice, shoes: [shoe] });
 }
 
 export async function deleteInvoiceById(req: Request, res: Response) {
   const { id } = req.params;
-  const invoice = await prismaClient.invoice.delete({
+  const invoice = await prismaClient.shoe.delete({
     where: {
       id: id,
     },

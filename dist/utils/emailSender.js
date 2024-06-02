@@ -22,8 +22,11 @@ const EMAILSERVER = process.env.EMAILSERVER;
 const EMAILPORT = process.env.EMAILPORT;
 const SSL = process.env.SSL === "true" ? true : false;
 const PRIVATEMAIL = process.env.PRIVATEMAIL;
-function sendInvoice(recipent, invoicePath) {
+function sendInvoice(recipent, invoicePaths) {
     return __awaiter(this, void 0, void 0, function* () {
+        const attachments = invoicePaths.map((url) => {
+            return { path: url };
+        });
         const transporter = nodemailer_1.default.createTransport({
             host: EMAILSERVER,
             port: +EMAILPORT,
@@ -51,11 +54,7 @@ function sendInvoice(recipent, invoicePath) {
             subject: "UMOWA KUPNA SPRZEDAŻY",
             text: "test",
             html: "<b>UMOWA KUPNA SPRZEDAŻY</b>",
-            attachments: [
-                {
-                    path: invoicePath,
-                },
-            ],
+            attachments,
         });
         return info;
     });

@@ -8,7 +8,10 @@ const EMAILPORT = process.env.EMAILPORT;
 const SSL = process.env.SSL === "true" ? true : false;
 const PRIVATEMAIL = process.env.PRIVATEMAIL;
 
-export async function sendInvoice(recipent: string, invoicePath: string) {
+export async function sendInvoice(recipent: string, invoicePaths: string[]) {
+  const attachments = invoicePaths.map((url) => {
+    return { path: url };
+  });
   const transporter = nodemailer.createTransport({
     host: EMAILSERVER,
     port: +EMAILPORT!,
@@ -37,11 +40,7 @@ export async function sendInvoice(recipent: string, invoicePath: string) {
     subject: "UMOWA KUPNA SPRZEDAŻY",
     text: "test",
     html: "<b>UMOWA KUPNA SPRZEDAŻY</b>",
-    attachments: [
-      {
-        path: invoicePath,
-      },
-    ],
+    attachments,
   });
   return info;
 }

@@ -52,6 +52,7 @@ function createInvoice(req, res) {
                 size: +shoe.size,
                 price: +shoe.price,
                 count: +shoe.count,
+                id: (0, uuid_1.v4)(),
             };
         });
         const _b = yield schema_1.invoiceSchema.parseAsync({
@@ -77,7 +78,7 @@ function createInvoice(req, res) {
             .split("T")[0]
             .split("-");
         const html = yield (0, readFileAsync_1.readFileAsync)("public/form.html", "utf-8");
-        const invoiceId = (0, uuid_1.v4)().substring(0, 8);
+        const invoiceId = (0, uuid_1.v4)();
         yield main_1.prismaClient.invoice.create({
             data: Object.assign(Object.assign({ id: invoiceId }, data), { signatureLink: imagePath, shoes: {
                     createMany: {
@@ -85,46 +86,48 @@ function createInvoice(req, res) {
                     },
                 } }),
         });
-        const options = {
-            format: "A4",
-            orientation: "portrait",
-            border: "10mm",
-            footer: {
-                height: "5mm",
-                contents: {
-                    default: `<span style="font-size: 10px">Id umowy: ${invoiceId}</span>`,
+        const files = yield Promise.all(newShoes.map((shoe) => __awaiter(this, void 0, void 0, function* () {
+            const options = {
+                format: "A4",
+                orientation: "portrait",
+                border: "10mm",
+                footer: {
+                    height: "5mm",
+                    contents: {
+                        default: `<span style="font-size: 10px">Id umowy: ${shoe.id.slice(0, 8)}</span>`,
+                    },
                 },
-            },
-        };
-        const currencyMark = {
-            PLN: "zł",
-            EUR: "€",
-        };
-        const document = {
-            html: html,
-            data: {
-                year,
-                month,
-                day,
-                lastname: jsonObject.lastname,
-                name: jsonObject.name,
-                postalCode: jsonObject.postalCode,
-                street: jsonObject.street,
-                streetNumber: jsonObject.streetNumber,
-                housingNumber: jsonObject.housingNumber,
-                city: jsonObject.city,
-                isHousingNumber: !!jsonObject.housingNumber,
-                signature: imagePath,
-                shoes: jsonObject.shoes,
-                country: jsonObject.country,
-                currency: jsonObject.currency,
-            },
-            path: `./invoices/${invoiceId}.pdf`,
-            type: "",
-        };
-        const { filename } = yield pdf_creator_node_1.default.create(document, options);
-        yield (0, emailSender_1.sendInvoice)(jsonObject.email, `./invoices/${invoiceId}.pdf`);
-        yield (0, unlinkAsync_1.unlinkAsync)(`./invoices/${invoiceId}.pdf`);
+            };
+            const document = {
+                html: html,
+                data: {
+                    year,
+                    month,
+                    day,
+                    lastname: jsonObject.lastname,
+                    name: jsonObject.name,
+                    postalCode: jsonObject.postalCode,
+                    street: jsonObject.street,
+                    streetNumber: jsonObject.streetNumber,
+                    housingNumber: jsonObject.housingNumber,
+                    city: jsonObject.city,
+                    isHousingNumber: !!jsonObject.housingNumber,
+                    signature: imagePath,
+                    shoes: [shoe],
+                    country: jsonObject.country,
+                    currency: jsonObject.currency,
+                },
+                path: `./invoices/${shoe.id.slice(0, 8)}.pdf`,
+                type: "",
+            };
+            const { filename } = yield pdf_creator_node_1.default.create(document, options);
+            return `./invoices/${shoe.id.slice(0, 8)}.pdf`;
+        })));
+        console.log(files);
+        yield (0, emailSender_1.sendInvoice)(jsonObject.email, files);
+        files.forEach((file) => __awaiter(this, void 0, void 0, function* () {
+            yield (0, unlinkAsync_1.unlinkAsync)(file);
+        }));
         res.status(201).json({});
     });
 }
@@ -132,12 +135,18 @@ exports.createInvoice = createInvoice;
 function regenerateInvoice(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         const { id } = req.params;
-        const invoice = yield main_1.prismaClient.invoice.findUnique({
+        const invoice = yield main_1.prismaClient.invoice.findFirst({
             where: {
-                id: id,
+                shoes: {
+                    some: {
+                        id,
+                    },
+                },
             },
-            include: {
-                shoes: true,
+        });
+        const shoe = yield main_1.prismaClient.shoe.findUnique({
+            where: {
+                id,
             },
         });
         if (!invoice)
@@ -151,7 +160,7 @@ function regenerateInvoice(req, res) {
             footer: {
                 height: "5mm",
                 contents: {
-                    default: `<span style="font-size: 10px">Id umowy: ${id}</span>`,
+                    default: `<span style="font-size: 10px">Id umowy: ${id.slice(0, 8)}</span>`,
                 },
             },
         };
@@ -173,16 +182,16 @@ function regenerateInvoice(req, res) {
                 housingNumber: invoice.housingNumber,
                 city: invoice.city,
                 isHousingNumber: !!invoice.housingNumber,
-                shoes: invoice.shoes,
+                shoes: [shoe],
                 country: invoice.country,
                 currency: invoice.currency,
                 signature: invoice.signatureLink,
             },
-            path: `./invoices/${id}.pdf`,
+            path: `./invoices/${id.slice(0, 8)}.pdf`,
             type: "",
         };
         const { filename } = yield pdf_creator_node_1.default.create(document, options);
-        res.status(200).download(`./invoices/${id}.pdf`, filename);
+        res.status(200).download(`./invoices/${id.slice(0, 8)}.pdf`, id.slice(0, 8));
     });
 }
 exports.regenerateInvoice = regenerateInvoice;
@@ -260,24 +269,44 @@ exports.getInvoices = getInvoices;
 function getInvoiceById(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         const { id } = req.params;
-        const invoice = yield main_1.prismaClient.invoice.findUnique({
+        const shoe = yield main_1.prismaClient.shoe.findUnique({
             where: {
                 id: id,
             },
-            include: {
-                shoes: true,
+        });
+        const invoice = yield main_1.prismaClient.invoice.findFirst({
+            select: {
+                city: true,
+                country: true,
+                date: true,
+                currency: true,
+                email: true,
+                housingNumber: true,
+                lastname: true,
+                name: true,
+                postalCode: true,
+                signatureLink: true,
+                street: true,
+                streetNumber: true,
+            },
+            where: {
+                shoes: {
+                    some: {
+                        id: id,
+                    },
+                },
             },
         });
-        if (!invoice)
+        if (!shoe)
             throw new NotFoundError_1.NotFoundError("Invoice not found!");
-        res.status(200).json(invoice);
+        res.status(200).json(Object.assign(Object.assign({}, invoice), { shoes: [shoe] }));
     });
 }
 exports.getInvoiceById = getInvoiceById;
 function deleteInvoiceById(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         const { id } = req.params;
-        const invoice = yield main_1.prismaClient.invoice.delete({
+        const invoice = yield main_1.prismaClient.shoe.delete({
             where: {
                 id: id,
             },
