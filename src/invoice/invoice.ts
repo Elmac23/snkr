@@ -28,14 +28,28 @@ export async function createInvoice(req: Request, res: Response) {
   const { json } = req.body;
   const jsonObject = JSON.parse(json);
 
-  const newShoes: NewShoe[] = jsonObject.shoes.map((shoe: Shoe) => {
-    return {
-      model: shoe.model,
-      size: +shoe.size,
-      price: +shoe.price,
-      count: +shoe.count,
-      id: uuid(),
-    };
+  const newShoes: NewShoe[] = [];
+
+  jsonObject.shoes.forEach((shoe: Shoe) => {
+    if (+shoe.count > 1) {
+      for (let i = 0; i < +shoe.count; i++) {
+        newShoes.push({
+          model: shoe.model,
+          size: +shoe.size,
+          price: +shoe.price,
+          count: 1,
+          id: uuid(),
+        });
+      }
+    } else {
+      newShoes.push({
+        model: shoe.model,
+        size: +shoe.size,
+        price: +shoe.price,
+        count: +shoe.count,
+        id: uuid(),
+      });
+    }
   });
 
   const { shoes, ...data } = await invoiceSchema.parseAsync({
@@ -134,7 +148,6 @@ export async function createInvoice(req: Request, res: Response) {
   files.forEach(async (file) => {
     await unlinkAsync(file);
   });
-
   res.status(201).json({});
 }
 

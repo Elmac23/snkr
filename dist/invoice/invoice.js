@@ -46,14 +46,28 @@ function createInvoice(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         const { json } = req.body;
         const jsonObject = JSON.parse(json);
-        const newShoes = jsonObject.shoes.map((shoe) => {
-            return {
-                model: shoe.model,
-                size: +shoe.size,
-                price: +shoe.price,
-                count: +shoe.count,
-                id: (0, uuid_1.v4)(),
-            };
+        const newShoes = [];
+        jsonObject.shoes.forEach((shoe) => {
+            if (+shoe.count > 1) {
+                for (let i = 0; i < +shoe.count; i++) {
+                    newShoes.push({
+                        model: shoe.model,
+                        size: +shoe.size,
+                        price: +shoe.price,
+                        count: 1,
+                        id: (0, uuid_1.v4)(),
+                    });
+                }
+            }
+            else {
+                newShoes.push({
+                    model: shoe.model,
+                    size: +shoe.size,
+                    price: +shoe.price,
+                    count: +shoe.count,
+                    id: (0, uuid_1.v4)(),
+                });
+            }
         });
         const _b = yield schema_1.invoiceSchema.parseAsync({
             date: jsonObject.date,
