@@ -14,6 +14,7 @@ import { config } from "dotenv";
 import jwt from "jsonwebtoken";
 import { ForbiddenError } from "../utils/Errors/ForbiddenError";
 import { authorize } from "../middleware/authorize";
+import { generateShoeId } from "../utils/generateShoeId";
 config();
 
 type NewShoe = {
@@ -30,27 +31,29 @@ export async function createInvoice(req: Request, res: Response) {
 
   const newShoes: NewShoe[] = [];
 
-  jsonObject.shoes.forEach((shoe: Shoe) => {
+  for (const shoe of jsonObject.shoes) {
     if (+shoe.count > 1) {
       for (let i = 0; i < +shoe.count; i++) {
+        const shoeId = await generateShoeId();
         newShoes.push({
           model: shoe.model,
           size: +shoe.size,
           price: +shoe.price,
           count: 1,
-          id: uuid(),
+          id: shoeId,
         });
       }
     } else {
+      const shoeId = await generateShoeId();
       newShoes.push({
         model: shoe.model,
         size: +shoe.size,
         price: +shoe.price,
         count: +shoe.count,
-        id: uuid(),
+        id: shoeId,
       });
     }
-  });
+  }
 
   const { shoes, ...data } = await invoiceSchema.parseAsync({
     date: jsonObject.date,
@@ -105,10 +108,7 @@ export async function createInvoice(req: Request, res: Response) {
         footer: {
           height: "5mm",
           contents: {
-            default: `<span style="font-size: 10px">Id umowy: ${shoe.id.slice(
-              0,
-              8
-            )}</span>`,
+            default: `<span style="font-size: 10px">Id umowy: ${shoe.id}</span>`,
           },
         },
       };
@@ -131,12 +131,12 @@ export async function createInvoice(req: Request, res: Response) {
           country: jsonObject.country,
           currency: jsonObject.currency,
         },
-        path: `./invoices/${shoe.id.slice(0, 8)}.pdf`,
+        path: `./invoices/${shoe.id}.pdf`,
         type: "",
       };
 
       const { filename } = await pdf.create(document, options);
-      return `./invoices/${shoe.id.slice(0, 8)}.pdf`;
+      return `./invoices/${shoe.id}.pdf`;
     })
   );
 
@@ -181,10 +181,7 @@ export async function regenerateInvoice(req: Request, res: Response) {
     footer: {
       height: "5mm",
       contents: {
-        default: `<span style="font-size: 10px">Id umowy: ${id.slice(
-          0,
-          8
-        )}</span>`,
+        default: `<span style="font-size: 10px">Id umowy: ${id}</span>`,
       },
     },
   };
@@ -213,11 +210,11 @@ export async function regenerateInvoice(req: Request, res: Response) {
       currency: invoice.currency,
       signature: invoice.signatureLink,
     },
-    path: `./invoices/${id.slice(0, 8)}.pdf`,
+    path: `./invoices/${id}.pdf`,
     type: "",
   };
   const { filename } = await pdf.create(document, options);
-  res.status(200).download(`./invoices/${id.slice(0, 8)}.pdf`, id.slice(0, 8));
+  res.status(200).download(`./invoices/${id}.pdf`, id);
   // await unlinkAsync(`./invoices/${id}.pdf`);
 }
 
@@ -334,6 +331,21 @@ export async function deleteInvoiceById(req: Request, res: Response) {
   res.status(204).json({});
 }
 
+export async function clearDatabase(req: Request, res: Response) {
+  try {
+    // Usuwanie wszystkich butów (które automatycznie usuną się z faktur przez relację)
+    await prismaClient.shoe.deleteMany({});
+
+    // Usuwanie wszystkich faktur
+    await prismaClient.invoice.deleteMany({});
+
+    res.status(200).json({ message: "Database cleared successfully" });
+  } catch (error) {
+    console.error("Error clearing database:", error);
+    res.status(500).json({ message: "Error clearing database" });
+  }
+}
+
 const invoiceRouter = Router();
 
 invoiceRouter.post("/invoices", createInvoice);
@@ -342,5 +354,6 @@ invoiceRouter.get("/invoices", authorize, getInvoices);
 invoiceRouter.get("/invoices/:id", authorize, getInvoiceById);
 invoiceRouter.get("/invoices/regenerate/:id", authorize, regenerateInvoice);
 invoiceRouter.delete("/invoices/:id", authorize, deleteInvoiceById);
+invoiceRouter.delete("/admin/clear-database", authorize, clearDatabase);
 
 export { invoiceRouter };
